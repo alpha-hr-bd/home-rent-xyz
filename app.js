@@ -1,1 +1,2716 @@
-const KEY="AHR_Home_Rent_v2";let db=JSON.parse(localStorage.getItem(KEY)||"null")||{settings:{property:"AHR Home Rent"},tenants:[],payments:[]};const $=id=>document.getElementById(id);const money=n=>"৳"+Number(n||0).toLocaleString("en-US");const now=()=>new Date().toISOString().slice(0,10);const mon=()=>now().slice(0,7);const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));function save(){localStorage.setItem(KEY,JSON.stringify(db));refresh()}function getT(id){return db.tenants.find(t=>t.id===id)}function login(){if($("email").value==="admin@demo.com"&&$("password").value==="123456")start("Admin");else $("loginMsg").textContent="Use admin@demo.com / 123456 or Demo Mode."}function demo(){start("Demo Admin")}function start(n){$("login").classList.add("hidden");$("app").classList.remove("hidden");$("adminName").textContent=n;refresh()}function logout(){location.reload()}function page(id,b){document.querySelectorAll(".section").forEach(x=>x.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));if(b)b.classList.add("active");if(id==="dashboard")renderDash();if(id==="tenants")renderTenants();if(id==="payments")renderPayments()}function refresh(){renderDash();renderTenants();renderPayments();$("property").value=db.settings.property||""}function renderDash(){let a=db.tenants.filter(t=>t.status==="active"),r=a.reduce((x,t)=>x+ +t.rent,0),s=a.reduce((x,t)=>x+ +t.service,0),m=db.payments.filter(p=>p.month===mon()),p=m.reduce((x,y)=>x+ +y.paid,0),expected=a.reduce((x,t)=>x+ +t.rent+ +t.service+ +t.other,0),recorded=m.reduce((x,y)=>x+ +y.total,0);$("active").textContent=a.length;$("members").textContent=a.reduce((x,t)=>x+ +t.members,0);$("rent").textContent=money(r);$("service").textContent=money(s);$("paid").textContent=money(p);$("due").textContent=money(Math.max(0,expected-recorded));let rows=db.payments.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);$("recent").innerHTML=rows.length?`<div class="table"><table><tr><th>Date</th><th>Tenant</th><th>Month</th><th>Total</th><th>Paid</th></tr>${rows.map(p=>`<tr><td>${p.date}</td><td>${esc(getT(p.tenantId)?.name||"Deleted")}</td><td>${p.month}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td></tr>`).join("")}</table></div>`:"<p>No payments yet.</p>"}function quick(n){let a=db.tenants.filter(t=>t.status==="active"),expected=a.reduce((x,t)=>x+(+t.rent+ +t.service+ +t.other)*n,0),d=new Date();d.setMonth(d.getMonth()-n+1);let from=d.toISOString().slice(0,7),paid=db.payments.filter(p=>p.month>=from&&p.month<=mon()).reduce((x,p)=>x+ +p.paid,0);$("quickResult").innerHTML=`<b>${n} Month Statement</b><br>Expected: <b>${money(expected)}</b> · Paid: <b>${money(paid)}</b> · Balance: <b>${money(Math.max(0,expected-paid))}</b>`}function openTenant(id){let t=id?getT(id):{name:"",phone:"",nid:"",flat:"",members:1,joining:now(),rent:0,service:0,other:0,advance:0,notes:""};$("mtitle").textContent=id?"Edit Tenant":"Add Tenant";$("mbody").innerHTML=`<form id="tenantForm" class="form">${field("Name","name",t.name,true)}${field("Mobile","phone",t.phone)}${field("NID/ID","nid",t.nid)}${field("Flat/Room","flat",t.flat,true)}${field("Member Count","members",t.members,false,"number")}${field("Joining Date","joining",t.joining,false,"date")}${field("Rent","rent",t.rent,false,"number")}${field("Service Charge","service",t.service,false,"number")}${field("Other Charge","other",t.other,false,"number")}${field("Advance","advance",t.advance,false,"number")}<label class="span">Notes<textarea name="notes">${esc(t.notes)}</textarea></label><div class="modal-actions span"><button type="button" class="soft" onclick="closeModal()">Cancel</button><button class="primary">Save</button></div></form>`;$("tenantForm").onsubmit=e=>{e.preventDefault();let f=new FormData(e.target),o=Object.fromEntries(f);["members","rent","service","other","advance"].forEach(k=>o[k]=+o[k]||0);if(id)Object.assign(getT(id),o);else db.tenants.push({...o,id:"t"+Date.now(),status:"active",outDate:""});closeModal();save()};$("modal").classList.remove("hidden")}function field(label,n,v,req=false,type="text"){return`<label>${label}<input name="${n}" type="${type}" ${req?"required":""} value="${esc(v)}"></label>`}function closeModal(){$("modal").classList.add("hidden")}function renderTenants(){let q=($("tSearch").value||"").toLowerCase(),s=$("tStatus").value,a=db.tenants.filter(t=>(s==="all"||t.status===s)&&[t.name,t.phone,t.flat].join(" ").toLowerCase().includes(q));$("tenantRows").innerHTML=a.length?a.map(t=>`<tr><td><b>${esc(t.name)}</b><br><small>${esc(t.phone)}</small></td><td>${esc(t.flat)}</td><td>${t.members}</td><td>${money(+t.rent+ +t.service+ +t.other)}</td><td><span class="badge ${t.status==="out"?"out":""}">${t.status}</span></td><td class="action"><button class="sm" onclick="openTenant('${t.id}')">Edit</button>${t.status==="active"?`<button class="sm red" onclick="outT('${t.id}')">Out</button>`:`<button class="sm" onclick="restore('${t.id}')">Restore</button>`}<button class="sm red" onclick="delT('${t.id}')">Delete</button></td></tr>`).join(""):`<tr><td colspan="6">No tenants.</td></tr>`}function outT(id){if(confirm("Mark tenant as OUT?")){getT(id).status="out";getT(id).outDate=now();save()}}function restore(id){getT(id).status="active";getT(id).outDate="";save()}function delT(id){if(confirm("Delete tenant?")){db.tenants=db.tenants.filter(t=>t.id!==id);save()}}function openPayment(){let a=db.tenants.filter(t=>t.status==="active");$("mtitle").textContent="Record Payment";$("mbody").innerHTML=`<form id="payForm" class="form"><label class="span">Tenant<select name="tenantId" required>${a.map(t=>`<option value="${t.id}">${esc(t.name)} — ${esc(t.flat)}</option>`).join("")}</select></label>${field("Month","month",mon(),true,"month")}${field("Date","date",now(),true,"date")}${field("Rent","rent",0,false,"number")}${field("Service Charge","service",0,false,"number")}${field("Other Charge","other",0,false,"number")}${field("Paid Amount","paid",0,false,"number")}<label>Payment Method<select name="method"><option>Cash</option><option>bKash</option><option>Bank</option><option>Other</option></select></label>${field("Reference","ref","")}<label class="span">Notes<textarea name="notes"></textarea></label><div class="modal-actions span"><button type="button" class="soft" onclick="closeModal()">Cancel</button><button class="primary">Save Payment</button></div></form>`;$("payForm").onsubmit=e=>{e.preventDefault();let o=Object.fromEntries(new FormData(e.target));["rent","service","other","paid"].forEach(k=>o[k]=+o[k]||0);o.total=o.rent+o.service+o.other;o.due=Math.max(0,o.total-o.paid);o.id="p"+Date.now();db.payments.push(o);closeModal();save()};$("modal").classList.remove("hidden")}function renderPayments(){let q=($("pSearch").value||"").toLowerCase(),cur=$("pFilter").value==="month",a=db.payments.filter(p=>(!cur||p.month===mon())&&[p.month,getT(p.tenantId)?.name||"",getT(p.tenantId)?.flat||""].join(" ").toLowerCase().includes(q)).sort((x,y)=>y.date.localeCompare(x.date));$("paymentRows").innerHTML=a.length?a.map(p=>`<tr><td>${p.date}</td><td>${esc(getT(p.tenantId)?.name||"Deleted")}</td><td>${p.month}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td><td>${money(p.due)}</td><td class="action"><button class="sm" onclick="receipt('${p.id}')">Receipt</button><button class="sm red" onclick="delP('${p.id}')">Delete</button></td></tr>`).join(""):`<tr><td colspan="7">No payments.</td></tr>`}function delP(id){if(confirm("Delete payment?")){db.payments=db.payments.filter(p=>p.id!==id);save()}}function receipt(id){let p=db.payments.find(x=>x.id===id),t=getT(p.tenantId),w=open("","_blank");w.document.write(`<html><body style="font-family:Arial;max-width:650px;margin:40px auto"><h2>${esc(db.settings.property)} — AHR Home Rent System</h2><p>Payment Receipt</p><hr><p>Tenant: ${esc(t?.name||"Deleted")}<br>Flat: ${esc(t?.flat||"")}<br>Month: ${p.month}<br>Date: ${p.date}</p><p>Rent: ${money(p.rent)}<br>Service: ${money(p.service)}<br>Other: ${money(p.other)}<br><b>Total: ${money(p.total)}</b><br>Paid: ${money(p.paid)}<br>Due: ${money(p.due)}</p><script>print()<\/script></body></html>`);w.document.close()}function makeReport(){let f=$("from").value||mon(),t=$("to").value||mon(),a=db.payments.filter(p=>p.month>=f&&p.month<=t),total=a.reduce((x,p)=>x+p.total,0),paid=a.reduce((x,p)=>x+p.paid,0),due=a.reduce((x,p)=>x+p.due,0);$("report").innerHTML=`<div class="report-doc"><div class="report-head"><div><h2>${esc(db.settings.property)}</h2><b>AHR HOME RENT SYSTEM</b><p>Premium Rental Management Report</p></div><div><b>STATEMENT</b><br>${f} → ${t}<br>Generated ${now()}</div></div><div class="report-summary"><div><small>Transactions</small><b>${a.length}</b></div><div><small>Total Charged</small><b>${money(total)}</b></div><div><small>Total Paid</small><b>${money(paid)}</b></div><div><small>Total Due</small><b>${money(due)}</b></div></div><table class="report-table"><tr><th>Date</th><th>Tenant</th><th>Flat</th><th>Month</th><th>Charged</th><th>Paid</th><th>Due</th></tr>${a.map(p=>`<tr><td>${p.date}</td><td>${esc(getT(p.tenantId)?.name||"Deleted")}</td><td>${esc(getT(p.tenantId)?.flat||"")}</td><td>${p.month}</td><td>${money(p.total)}</td><td>${money(p.paid)}</td><td>${money(p.due)}</td></tr>`).join("")}</table><p style="margin-top:28px;color:#778699">Generated by AHR Home Rent System</p></div>`}function downloadPDF(){if(!$("report").innerHTML){makeReport()}setTimeout(()=>{let doc=$("report").innerHTML,w=open("","_blank");w.document.write(`<html><head><title>AHR Home Rent System Report</title><style>${document.querySelector("style")?.innerHTML||""}@page{size:A4;margin:15mm}body{background:white}.report-doc{border:1px solid #ddd;padding:30px}.report-doc:after{content:"AHR HOME RENT SYSTEM • PREMIUM";position:fixed;bottom:10mm;left:0;right:0;text-align:center;color:#aab8c7;font-size:10px;letter-spacing:2px}.report-head{display:flex;justify-content:space-between;border-bottom:2px solid #1475ce;padding-bottom:15px}.report-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.report-summary div{background:#f5f9fd;padding:12px}.report-table{width:100%;border-collapse:collapse}.report-table th,.report-table td{padding:7px;border-bottom:1px solid #ddd;text-align:left;font-size:11px}</style></head><body>${doc}<script>setTimeout(()=>print(),300)<\/script></body></html>`);w.document.close()},100)}function saveSettings(){db.settings.property=$("property").value.trim()||"AHR Home Rent";save();alert("Saved")}function backup(){let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,2)],{type:"application/json"}));a.download="AHR-Home-Rent-Backup.json";a.click()}function restore(e){let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.tenants||!x.payments)throw 0;db=x;save();alert("Backup restored")}catch{alert("Invalid backup")}};r.readAsText(e.target.files[0])}function resetAll(){if(confirm("Delete ALL local data?")){localStorage.removeItem(KEY);location.reload()}}refresh();
+"use strict";
+
+/* =========================================================
+   AHR HOME RENT SYSTEM
+   Firebase FREE
+   LocalStorage Database
+   ========================================================= */
+
+
+/* ================= CONFIG ================= */
+
+const DEFAULT_ADMIN = {
+  email: "admin@demo.com",
+  password: "123456"
+};
+
+const DB_KEY = "AHR_HOME_RENT_DATABASE_V5";
+const AUTH_KEY = "AHR_HOME_RENT_AUTH_V5";
+const ADMIN_KEY = "AHR_HOME_RENT_ADMIN_V5";
+
+
+/* ================= HELPERS ================= */
+
+function $(id){
+  return document.getElementById(id);
+}
+
+function money(value){
+  return "৳" + Number(value || 0).toLocaleString("en-BD");
+}
+
+function today(){
+
+  const d = new Date();
+
+  return d.toISOString().slice(0,10);
+
+}
+
+function currentMonth(){
+
+  const d = new Date();
+
+  return d.toISOString().slice(0,7);
+
+}
+
+function uid(prefix){
+
+  return (
+    prefix +
+    Date.now() +
+    Math.random()
+      .toString(36)
+      .slice(2,8)
+  );
+
+}
+
+function escapeHTML(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+
+}
+
+
+/* ================= DATABASE ================= */
+
+function defaultDatabase(){
+
+  return {
+    tenants: [],
+    payments: [],
+    createdAt: new Date().toISOString()
+  };
+
+}
+
+
+function getDB(){
+
+  try{
+
+    const raw =
+      localStorage.getItem(DB_KEY);
+
+    if(!raw){
+
+      const db =
+        defaultDatabase();
+
+      saveDB(db);
+
+      return db;
+
+    }
+
+    return JSON.parse(raw);
+
+  }catch(error){
+
+    console.error(error);
+
+    const db =
+      defaultDatabase();
+
+    saveDB(db);
+
+    return db;
+
+  }
+
+}
+
+
+function saveDB(db){
+
+  localStorage.setItem(
+    DB_KEY,
+    JSON.stringify(db)
+  );
+
+}
+
+
+/* ================= ADMIN ================= */
+
+function getAdmin(){
+
+  try{
+
+    const raw =
+      localStorage.getItem(ADMIN_KEY);
+
+    if(!raw){
+
+      localStorage.setItem(
+        ADMIN_KEY,
+        JSON.stringify(DEFAULT_ADMIN)
+      );
+
+      return {
+        ...DEFAULT_ADMIN
+      };
+
+    }
+
+    return JSON.parse(raw);
+
+  }catch{
+
+    return {
+      ...DEFAULT_ADMIN
+    };
+
+  }
+
+}
+
+
+/* ================= AUTH ================= */
+
+function showLogin(){
+
+  $("loginPage").classList.remove("hidden");
+
+  $("appPage").classList.add("hidden");
+
+}
+
+
+function showApp(){
+
+  $("loginPage").classList.add("hidden");
+
+  $("appPage").classList.remove("hidden");
+
+  refreshAll();
+
+}
+
+
+function login(){
+
+  const email =
+    $("email").value.trim();
+
+  const password =
+    $("password").value;
+
+  const admin =
+    getAdmin();
+
+  const error =
+    $("loginError");
+
+
+  if(
+    email.toLowerCase() ===
+      admin.email.toLowerCase()
+    &&
+    password === admin.password
+  ){
+
+    localStorage.setItem(
+      AUTH_KEY,
+      "1"
+    );
+
+    error.style.display = "none";
+
+    showApp();
+
+    toast("Login successful");
+
+  }else{
+
+    error.textContent =
+      "Wrong email or password.";
+
+    error.style.display =
+      "block";
+
+  }
+
+}
+
+
+function demoLogin(){
+
+  $("email").value =
+    "admin@demo.com";
+
+  $("password").value =
+    "123456";
+
+  login();
+
+}
+
+
+function logout(){
+
+  localStorage.removeItem(
+    AUTH_KEY
+  );
+
+  showLogin();
+
+  $("password").value = "";
+
+}
+
+
+/* ================= NAVIGATION ================= */
+
+function openPage(page){
+
+  document
+    .querySelectorAll(".page-section")
+    .forEach(section => {
+
+      section.classList.remove(
+        "active-page"
+      );
+
+    });
+
+
+  const target =
+    $(page);
+
+  if(target){
+
+    target.classList.add(
+      "active-page"
+    );
+
+  }
+
+
+  document
+    .querySelectorAll(".nav-btn")
+    .forEach(button => {
+
+      button.classList.toggle(
+        "active",
+        button.dataset.page === page
+      );
+
+    });
+
+
+  if(page === "tenants"){
+    renderTenants();
+  }
+
+  if(page === "payments"){
+    renderPayments();
+  }
+
+  if(page === "reports"){
+    createReport(1);
+  }
+
+}
+
+
+/* ================= TENANT ================= */
+
+function openTenantModal(id = null){
+
+  $("tenantForm").reset();
+
+  $("tenantId").value = "";
+
+  $("tenantMembers").value = 1;
+
+  $("tenantRent").value = 0;
+
+  $("tenantService").value = 0;
+
+  $("tenantOther").value = 0;
+
+  $("tenantAdvance").value = 0;
+
+  $("tenantJoin").value = today();
+
+  $("tenantStatusForm").value =
+    "active";
+
+
+  if(id){
+
+    const db = getDB();
+
+    const tenant =
+      db.tenants.find(
+        x => x.id === id
+      );
+
+    if(!tenant) return;
+
+
+    $("tenantModalTitle").textContent =
+      "Edit Tenant";
+
+    $("tenantId").value =
+      tenant.id;
+
+    $("tenantName").value =
+      tenant.name || "";
+
+    $("tenantPhone").value =
+      tenant.phone || "";
+
+    $("tenantRoom").value =
+      tenant.room || "";
+
+    $("tenantMembers").value =
+      tenant.members || 1;
+
+    $("tenantRent").value =
+      tenant.rent || 0;
+
+    $("tenantService").value =
+      tenant.service || 0;
+
+    $("tenantOther").value =
+      tenant.other || 0;
+
+    $("tenantAdvance").value =
+      tenant.advance || 0;
+
+    $("tenantJoin").value =
+      tenant.joinDate || "";
+
+    $("tenantStatusForm").value =
+      tenant.status || "active";
+
+    $("tenantOut").value =
+      tenant.outDate || "";
+
+    $("tenantAddress").value =
+      tenant.address || "";
+
+    $("tenantNote").value =
+      tenant.note || "";
+
+  }else{
+
+    $("tenantModalTitle").textContent =
+      "Add Tenant";
+
+  }
+
+
+  $("tenantModal")
+    .classList.remove("hidden");
+
+}
+
+
+function closeTenantModal(){
+
+  $("tenantModal")
+    .classList.add("hidden");
+
+}
+
+
+function saveTenant(event){
+
+  event.preventDefault();
+
+
+  const db =
+    getDB();
+
+  const id =
+    $("tenantId").value;
+
+
+  const tenant = {
+
+    id:
+      id || uid("tenant_"),
+
+    name:
+      $("tenantName").value.trim(),
+
+    phone:
+      $("tenantPhone").value.trim(),
+
+    room:
+      $("tenantRoom").value.trim(),
+
+    members:
+      Number(
+        $("tenantMembers").value || 1
+      ),
+
+    rent:
+      Number(
+        $("tenantRent").value || 0
+      ),
+
+    service:
+      Number(
+        $("tenantService").value || 0
+      ),
+
+    other:
+      Number(
+        $("tenantOther").value || 0
+      ),
+
+    advance:
+      Number(
+        $("tenantAdvance").value || 0
+      ),
+
+    joinDate:
+      $("tenantJoin").value,
+
+    status:
+      $("tenantStatusForm").value,
+
+    outDate:
+      $("tenantOut").value,
+
+    address:
+      $("tenantAddress").value.trim(),
+
+    note:
+      $("tenantNote").value.trim(),
+
+    updatedAt:
+      new Date().toISOString()
+
+  };
+
+
+  if(!tenant.name){
+
+    alert("Tenant name required.");
+
+    return;
+
+  }
+
+
+  if(id){
+
+    const index =
+      db.tenants.findIndex(
+        x => x.id === id
+      );
+
+    if(index !== -1){
+
+      db.tenants[index] =
+        {
+          ...db.tenants[index],
+          ...tenant
+        };
+
+    }
+
+    toast("Tenant updated");
+
+  }else{
+
+    db.tenants.unshift(
+      tenant
+    );
+
+    toast("Tenant added");
+
+  }
+
+
+  saveDB(db);
+
+  closeTenantModal();
+
+  refreshAll();
+
+}
+
+
+function editTenant(id){
+
+  openTenantModal(id);
+
+}
+
+
+function outTenant(id){
+
+  const db =
+    getDB();
+
+  const tenant =
+    db.tenants.find(
+      x => x.id === id
+    );
+
+  if(!tenant) return;
+
+
+  if(
+    !confirm(
+      "Mark this tenant as OUT?"
+    )
+  ){
+
+    return;
+
+  }
+
+
+  tenant.status = "out";
+
+  tenant.outDate = today();
+
+  saveDB(db);
+
+  refreshAll();
+
+  toast("Tenant marked as out");
+
+}
+
+
+function restoreTenant(id){
+
+  const db =
+    getDB();
+
+  const tenant =
+    db.tenants.find(
+      x => x.id === id
+    );
+
+  if(!tenant) return;
+
+
+  tenant.status =
+    "active";
+
+  tenant.outDate = "";
+
+  saveDB(db);
+
+  refreshAll();
+
+  toast("Tenant restored");
+
+}
+
+
+function deleteTenant(id){
+
+  const db =
+    getDB();
+
+  const tenant =
+    db.tenants.find(
+      x => x.id === id
+    );
+
+  if(!tenant) return;
+
+
+  if(
+    !confirm(
+      "Delete this tenant permanently?"
+    )
+  ){
+
+    return;
+
+  }
+
+
+  db.tenants =
+    db.tenants.filter(
+      x => x.id !== id
+    );
+
+
+  saveDB(db);
+
+  refreshAll();
+
+  toast("Tenant deleted");
+
+}
+
+
+/* ================= TENANT ACTIVE ================= */
+
+function tenantActiveInMonth(
+  tenant,
+  month
+){
+
+  const first =
+    month + "-01";
+
+  if(
+    tenant.joinDate &&
+    tenant.joinDate > first
+  ){
+
+    return false;
+
+  }
+
+
+  if(
+    tenant.outDate &&
+    tenant.outDate < first
+  ){
+
+    return false;
+
+  }
+
+
+  return true;
+
+}
+
+
+/* ================= TENANT TABLE ================= */
+
+function renderTenants(){
+
+  const db =
+    getDB();
+
+  const search =
+    $("tenantSearch")
+      .value
+      .toLowerCase()
+      .trim();
+
+  const status =
+    $("tenantStatus").value;
+
+
+  let tenants =
+    [...db.tenants];
+
+
+  if(search){
+
+    tenants =
+      tenants.filter(t =>
+
+        [
+          t.name,
+          t.phone,
+          t.room
+        ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search)
+
+      );
+
+  }
+
+
+  if(status !== "all"){
+
+    tenants =
+      tenants.filter(
+        t => t.status === status
+      );
+
+  }
+
+
+  const table =
+    $("tenantTable");
+
+
+  if(!tenants.length){
+
+    table.innerHTML =
+      `
+      <tr>
+        <td colspan="8">
+          <div class="empty">
+            No tenant found.
+          </div>
+        </td>
+      </tr>
+      `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    tenants.map(t => {
+
+      const statusHTML =
+        t.status === "active"
+
+          ?
+
+        `<span class="status active">ACTIVE</span>`
+
+          :
+
+        `<span class="status out">OUT</span>`;
+
+
+      const actionHTML =
+        t.status === "active"
+
+          ?
+
+        `
+        <button
+          class="action-btn out-btn"
+          onclick="outTenant('${t.id}')"
+        >
+          Out
+        </button>
+        `
+
+          :
+
+        `
+        <button
+          class="action-btn restore-btn"
+          onclick="restoreTenant('${t.id}')"
+        >
+          Restore
+        </button>
+        `;
+
+
+      return `
+
+        <tr>
+
+          <td>
+            <strong>
+              ${escapeHTML(t.name)}
+            </strong>
+
+            <br>
+
+            <small>
+              ${escapeHTML(t.room || "-")}
+            </small>
+          </td>
+
+          <td>
+            ${escapeHTML(t.phone || "-")}
+          </td>
+
+          <td>
+            ${t.members || 1}
+          </td>
+
+          <td>
+            ${money(t.rent)}
+          </td>
+
+          <td>
+            ${money(t.service)}
+          </td>
+
+          <td>
+            ${money(t.other)}
+          </td>
+
+          <td>
+            ${statusHTML}
+          </td>
+
+          <td>
+
+            <div class="action-row">
+
+              <button
+                class="action-btn edit-btn"
+                onclick="editTenant('${t.id}')"
+              >
+                Edit
+              </button>
+
+              ${actionHTML}
+
+              <button
+                class="action-btn delete-btn"
+                onclick="deleteTenant('${t.id}')"
+              >
+                Delete
+              </button>
+
+            </div>
+
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join("");
+
+}
+
+
+/* ================= PAYMENT ================= */
+
+function openPaymentModal(){
+
+  const db =
+    getDB();
+
+
+  const select =
+    $("paymentTenant");
+
+
+  select.innerHTML =
+    `
+      <option value="">
+        Select Tenant
+      </option>
+    `;
+
+
+  db.tenants
+    .filter(
+      t => t.status === "active"
+    )
+    .forEach(t => {
+
+      select.innerHTML +=
+        `
+        <option value="${t.id}">
+          ${escapeHTML(t.name)}
+          ${t.room ? " • " + escapeHTML(t.room) : ""}
+        </option>
+        `;
+
+    });
+
+
+  $("paymentForm").reset();
+
+  $("paymentDate").value =
+    today();
+
+  $("paymentPeriod").value =
+    currentMonth();
+
+
+  $("paymentModal")
+    .classList.remove("hidden");
+
+}
+
+
+function closePaymentModal(){
+
+  $("paymentModal")
+    .classList.add("hidden");
+
+}
+
+
+function savePayment(event){
+
+  event.preventDefault();
+
+
+  const db =
+    getDB();
+
+
+  const tenantId =
+    $("paymentTenant").value;
+
+
+  if(!tenantId){
+
+    alert(
+      "Please select a tenant."
+    );
+
+    return;
+
+  }
+
+
+  const payment = {
+
+    id:
+      uid("payment_"),
+
+    tenantId,
+
+    amount:
+      Number(
+        $("paymentAmount").value || 0
+      ),
+
+    date:
+      $("paymentDate").value ||
+      today(),
+
+    period:
+      $("paymentPeriod").value ||
+      currentMonth(),
+
+    method:
+      $("paymentMethod").value,
+
+    note:
+      $("paymentNote").value.trim(),
+
+    createdAt:
+      new Date().toISOString()
+
+  };
+
+
+  if(payment.amount <= 0){
+
+    alert(
+      "Payment amount must be greater than 0."
+    );
+
+    return;
+
+  }
+
+
+  db.payments.unshift(
+    payment
+  );
+
+  saveDB(db);
+
+  closePaymentModal();
+
+  refreshAll();
+
+  toast("Payment saved");
+
+}
+
+
+/* ================= PAYMENT TABLE ================= */
+
+function renderPayments(){
+
+  const db =
+    getDB();
+
+  const search =
+    $("paymentSearch")
+      .value
+      .toLowerCase()
+      .trim();
+
+  const month =
+    $("paymentMonth").value;
+
+
+  let payments =
+    [...db.payments];
+
+
+  if(month){
+
+    payments =
+      payments.filter(
+        p => p.period === month
+      );
+
+  }
+
+
+  if(search){
+
+    payments =
+      payments.filter(p => {
+
+        const tenant =
+          db.tenants.find(
+            t => t.id === p.tenantId
+          );
+
+        const text =
+          [
+            tenant?.name,
+            tenant?.phone,
+            p.method,
+            p.note,
+            p.period
+          ]
+          .join(" ")
+          .toLowerCase();
+
+        return text.includes(search);
+
+      });
+
+  }
+
+
+  const table =
+    $("paymentTable");
+
+
+  if(!payments.length){
+
+    table.innerHTML =
+      `
+      <tr>
+        <td colspan="7">
+          <div class="empty">
+            No payments found.
+          </div>
+        </td>
+      </tr>
+      `;
+
+    return;
+
+  }
+
+
+  table.innerHTML =
+    payments.map(p => {
+
+      const tenant =
+        db.tenants.find(
+          t => t.id === p.tenantId
+        );
+
+
+      return `
+
+        <tr>
+
+          <td>
+            ${escapeHTML(p.date)}
+          </td>
+
+          <td>
+            <strong>
+              ${escapeHTML(
+                tenant?.name || "Deleted Tenant"
+              )}
+            </strong>
+          </td>
+
+          <td>
+            ${escapeHTML(p.period)}
+          </td>
+
+          <td>
+            <strong>
+              ${money(p.amount)}
+            </strong>
+          </td>
+
+          <td>
+            ${escapeHTML(p.method)}
+          </td>
+
+          <td>
+            ${escapeHTML(p.note || "-")}
+          </td>
+
+          <td>
+
+            <button
+              class="action-btn delete-btn"
+              onclick="deletePayment('${p.id}')"
+            >
+              Delete
+            </button>
+
+          </td>
+
+        </tr>
+
+      `;
+
+    }).join("");
+
+}
+
+
+function deletePayment(id){
+
+  if(
+    !confirm(
+      "Delete this payment?"
+    )
+  ){
+
+    return;
+
+  }
+
+
+  const db =
+    getDB();
+
+  db.payments =
+    db.payments.filter(
+      p => p.id !== id
+    );
+
+  saveDB(db);
+
+  refreshAll();
+
+  toast("Payment deleted");
+
+}
+
+
+/* ================= DASHBOARD ================= */
+
+function renderDashboard(){
+
+  const db =
+    getDB();
+
+
+  const active =
+    db.tenants.filter(
+      t => t.status === "active"
+    );
+
+
+  const members =
+    active.reduce(
+      (sum,t) =>
+        sum + Number(t.members || 0),
+      0
+    );
+
+
+  const rent =
+    active.reduce(
+      (sum,t) =>
+        sum + Number(t.rent || 0),
+      0
+    );
+
+
+  const service =
+    active.reduce(
+      (sum,t) =>
+        sum + Number(t.service || 0),
+      0
+    );
+
+
+  const other =
+    active.reduce(
+      (sum,t) =>
+        sum + Number(t.other || 0),
+      0
+    );
+
+
+  const month =
+    currentMonth();
+
+
+  const paid =
+    db.payments
+      .filter(
+        p => p.period === month
+      )
+      .reduce(
+        (sum,p) =>
+          sum + Number(p.amount || 0),
+        0
+      );
+
+
+  const expected =
+    active.reduce(
+      (sum,t) =>
+        sum +
+        Number(t.rent || 0) +
+        Number(t.service || 0) +
+        Number(t.other || 0),
+      0
+    );
+
+
+  const due =
+    Math.max(
+      0,
+      expected - paid
+    );
+
+
+  $("statTenants").textContent =
+    db.tenants.length;
+
+  $("statActive").textContent =
+    active.length;
+
+  $("statMembers").textContent =
+    members;
+
+  $("statRent").textContent =
+    money(rent);
+
+  $("statService").textContent =
+    money(service);
+
+  $("statOther").textContent =
+    money(other);
+
+  $("statPaid").textContent =
+    money(paid);
+
+  $("statDue").textContent =
+    money(due);
+
+
+  /* RECENT PAYMENTS */
+
+  const recent =
+    db.payments
+      .slice(0,5);
+
+
+  if(!recent.length){
+
+    $("recentPayments").innerHTML =
+      `
+      <div class="empty">
+        No payment yet.
+      </div>
+      `;
+
+  }else{
+
+    $("recentPayments").innerHTML =
+      recent.map(p => {
+
+        const t =
+          db.tenants.find(
+            x => x.id === p.tenantId
+          );
+
+
+        return `
+          <div
+            style="
+              display:flex;
+              justify-content:space-between;
+              gap:10px;
+              padding:10px 0;
+              border-bottom:1px solid #eef2f7;
+            "
+          >
+
+            <div>
+              <strong>
+                ${escapeHTML(
+                  t?.name || "Unknown"
+                )}
+              </strong>
+
+              <br>
+
+              <small>
+                ${escapeHTML(p.period)}
+              </small>
+            </div>
+
+            <strong>
+              ${money(p.amount)}
+            </strong>
+
+          </div>
+        `;
+
+      }).join("");
+
+  }
+
+
+  /* RECENT TENANTS */
+
+  if(!active.length){
+
+    $("recentTenants").innerHTML =
+      `
+      <div class="empty">
+        No active tenant.
+      </div>
+      `;
+
+  }else{
+
+    $("recentTenants").innerHTML =
+      active
+        .slice(0,5)
+        .map(t => {
+
+          return `
+            <div
+              style="
+                display:flex;
+                justify-content:space-between;
+                padding:10px 0;
+                border-bottom:1px solid #eef2f7;
+              "
+            >
+
+              <div>
+
+                <strong>
+                  ${escapeHTML(t.name)}
+                </strong>
+
+                <br>
+
+                <small>
+                  ${escapeHTML(
+                    t.room || "No room"
+                  )}
+                </small>
+
+              </div>
+
+              <strong>
+                ${money(
+                  Number(t.rent || 0) +
+                  Number(t.service || 0) +
+                  Number(t.other || 0)
+                )}
+              </strong>
+
+            </div>
+          `;
+
+        }).join("");
+
+  }
+
+}
+
+
+/* ================= REPORT ================= */
+
+let currentReportMonths = 1;
+
+
+function createReport(months){
+
+  currentReportMonths =
+    Number(months);
+
+
+  const db =
+    getDB();
+
+
+  const now =
+    new Date();
+
+
+  const monthsList = [];
+
+
+  for(
+    let i = months - 1;
+    i >= 0;
+    i--
+  ){
+
+    const d =
+      new Date(
+        now.getFullYear(),
+        now.getMonth() - i,
+        1
+      );
+
+
+    monthsList.push(
+      d.toISOString().slice(0,7)
+    );
+
+  }
+
+
+  let expected = 0;
+
+
+  db.tenants.forEach(t => {
+
+    monthsList.forEach(month => {
+
+      if(
+        tenantActiveInMonth(
+          t,
+          month
+        )
+      ){
+
+        expected +=
+          Number(t.rent || 0) +
+          Number(t.service || 0) +
+          Number(t.other || 0);
+
+      }
+
+    });
+
+  });
+
+
+  const paid =
+    db.payments
+      .filter(
+        p =>
+          monthsList.includes(
+            p.period
+          )
+      )
+      .reduce(
+        (sum,p) =>
+          sum + Number(p.amount || 0),
+        0
+      );
+
+
+  const due =
+    Math.max(
+      0,
+      expected - paid
+    );
+
+
+  $("reportResult").innerHTML =
+    `
+
+      <div class="report-cards">
+
+        <div class="report-number">
+
+          <span>
+            Period
+          </span>
+
+          <strong>
+            ${months} Month${months > 1 ? "s" : ""}
+          </strong>
+
+        </div>
+
+
+        <div class="report-number">
+
+          <span>
+            Expected
+          </span>
+
+          <strong>
+            ${money(expected)}
+          </strong>
+
+        </div>
+
+
+        <div class="report-number">
+
+          <span>
+            Paid
+          </span>
+
+          <strong>
+            ${money(paid)}
+          </strong>
+
+        </div>
+
+
+        <div class="report-number">
+
+          <span>
+            Due
+          </span>
+
+          <strong>
+            ${money(due)}
+          </strong>
+
+        </div>
+
+
+        <div class="report-number">
+
+          <span>
+            Tenants
+          </span>
+
+          <strong>
+            ${db.tenants.length}
+          </strong>
+
+        </div>
+
+
+        <div class="report-number">
+
+          <span>
+            Generated
+          </span>
+
+          <strong>
+            ${today()}
+          </strong>
+
+        </div>
+
+      </div>
+
+    `;
+
+}
+
+
+function downloadPDF(){
+
+  const db =
+    getDB();
+
+
+  const now =
+    new Date();
+
+
+  const months =
+    currentReportMonths;
+
+
+  const monthNames = [];
+
+
+  for(
+    let i = months - 1;
+    i >= 0;
+    i--
+  ){
+
+    const d =
+      new Date(
+        now.getFullYear(),
+        now.getMonth() - i,
+        1
+      );
+
+
+    monthNames.push(
+      d.toISOString().slice(0,7)
+    );
+
+  }
+
+
+  let expected = 0;
+
+
+  db.tenants.forEach(t => {
+
+    monthNames.forEach(month => {
+
+      if(
+        tenantActiveInMonth(
+          t,
+          month
+        )
+      ){
+
+        expected +=
+          Number(t.rent || 0) +
+          Number(t.service || 0) +
+          Number(t.other || 0);
+
+      }
+
+    });
+
+  });
+
+
+  const paid =
+    db.payments
+      .filter(
+        p =>
+          monthNames.includes(
+            p.period
+          )
+      )
+      .reduce(
+        (sum,p) =>
+          sum + Number(p.amount || 0),
+        0
+      );
+
+
+  const due =
+    Math.max(
+      0,
+      expected - paid
+    );
+
+
+  const rows =
+    db.tenants
+      .map(t => {
+
+        let tenantExpected = 0;
+
+        monthNames.forEach(month => {
+
+          if(
+            tenantActiveInMonth(
+              t,
+              month
+            )
+          ){
+
+            tenantExpected +=
+              Number(t.rent || 0) +
+              Number(t.service || 0) +
+              Number(t.other || 0);
+
+          }
+
+        });
+
+
+        const tenantPaid =
+          db.payments
+            .filter(
+              p =>
+                p.tenantId === t.id &&
+                monthNames.includes(
+                  p.period
+                )
+            )
+            .reduce(
+              (sum,p) =>
+                sum + Number(p.amount || 0),
+              0
+            );
+
+
+        const tenantDue =
+          Math.max(
+            0,
+            tenantExpected - tenantPaid
+          );
+
+
+        return `
+
+          <tr>
+
+            <td>
+              ${escapeHTML(t.name)}
+            </td>
+
+            <td>
+              ${escapeHTML(t.room || "-")}
+            </td>
+
+            <td>
+              ${money(tenantExpected)}
+            </td>
+
+            <td>
+              ${money(tenantPaid)}
+            </td>
+
+            <td>
+              ${money(tenantDue)}
+            </td>
+
+          </tr>
+
+        `;
+
+      }).join("");
+
+
+  const reportHTML = `
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>
+AHR Home Rent System - Report
+</title>
+
+<style>
+
+body{
+  font-family:Arial,sans-serif;
+  margin:40px;
+  color:#111827;
+}
+
+.header{
+  text-align:center;
+  border-bottom:3px solid #2563eb;
+  padding-bottom:20px;
+  margin-bottom:25px;
+}
+
+.header h1{
+  margin:0;
+  color:#2563eb;
+}
+
+.header p{
+  color:#64748b;
+}
+
+.cards{
+  display:flex;
+  gap:15px;
+  margin-bottom:25px;
+}
+
+.card{
+  border:1px solid #ddd;
+  padding:15px;
+  flex:1;
+  border-radius:10px;
+}
+
+.card small{
+  display:block;
+  color:#64748b;
+  margin-bottom:6px;
+}
+
+.card strong{
+  font-size:20px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  border:1px solid #ddd;
+  padding:10px;
+  text-align:left;
+}
+
+th{
+  background:#eff6ff;
+}
+
+.footer{
+  position:fixed;
+  bottom:15px;
+  left:0;
+  right:0;
+  text-align:center;
+  color:#94a3b8;
+  font-size:11px;
+  letter-spacing:2px;
+}
+
+@media print{
+  body{
+    margin:20px;
+  }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<div class="header">
+
+  <h1>
+    AHR Home Rent System
+  </h1>
+
+  <p>
+    Premium Home Rent Management
+  </p>
+
+  <p>
+    Report Period:
+    ${months} Month${months > 1 ? "s" : ""}
+  </p>
+
+</div>
+
+
+<div class="cards">
+
+  <div class="card">
+
+    <small>
+      Expected
+    </small>
+
+    <strong>
+      ${money(expected)}
+    </strong>
+
+  </div>
+
+
+  <div class="card">
+
+    <small>
+      Paid
+    </small>
+
+    <strong>
+      ${money(paid)}
+    </strong>
+
+  </div>
+
+
+  <div class="card">
+
+    <small>
+      Due
+    </small>
+
+    <strong>
+      ${money(due)}
+    </strong>
+
+  </div>
+
+</div>
+
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+Tenant
+</th>
+
+<th>
+Room
+</th>
+
+<th>
+Expected
+</th>
+
+<th>
+Paid
+</th>
+
+<th>
+Due
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+${rows}
+
+</tbody>
+
+</table>
+
+
+<div class="footer">
+
+AHR HOME RENT SYSTEM • PREMIUM
+
+</div>
+
+
+<script>
+
+window.onload = function(){
+
+  window.print();
+
+};
+
+</script>
+
+</body>
+
+</html>
+
+`;
+
+
+  const win =
+    window.open(
+      "",
+      "_blank"
+    );
+
+
+  if(!win){
+
+    alert(
+      "Popup blocked. Please allow popups for this site."
+    );
+
+    return;
+
+  }
+
+
+  win.document.open();
+
+  win.document.write(
+    reportHTML
+  );
+
+  win.document.close();
+
+}
+
+
+/* ================= BACKUP ================= */
+
+function backupDatabase(){
+
+  const db =
+    getDB();
+
+
+  const admin =
+    getAdmin();
+
+
+  const backup = {
+
+    system:
+      "AHR Home Rent System",
+
+    version:
+      "5.0",
+
+    exportedAt:
+      new Date().toISOString(),
+
+    database:
+      db,
+
+    admin:
+      admin
+
+  };
+
+
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          backup,
+          null,
+          2
+        )
+      ],
+      {
+        type:
+          "application/json"
+      }
+    );
+
+
+  const url =
+    URL.createObjectURL(blob);
+
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+
+  a.download =
+    "AHR-Home-Rent-Backup.json";
+
+  document.body.appendChild(a);
+
+  a.click();
+
+  a.remove();
+
+  URL.revokeObjectURL(url);
+
+  toast("Backup downloaded");
+
+}
+
+
+function restoreDatabase(file){
+
+  if(!file) return;
+
+
+  const reader =
+    new FileReader();
+
+
+  reader.onload =
+    function(){
+
+      try{
+
+        const data =
+          JSON.parse(
+            reader.result
+          );
+
+
+        if(
+          !data.database ||
+          !Array.isArray(
+            data.database.tenants
+          ) ||
+          !Array.isArray(
+            data.database.payments
+          )
+        ){
+
+          alert(
+            "Invalid AHR backup file."
+          );
+
+          return;
+
+        }
+
+
+        if(
+          !confirm(
+            "Restore backup? Current data will be replaced."
+          )
+        ){
+
+          return;
+
+        }
+
+
+        saveDB(
+          data.database
+        );
+
+
+        if(data.admin){
+
+          localStorage.setItem(
+            ADMIN_KEY,
+            JSON.stringify(
+              data.admin
+            )
+          );
+
+        }
+
+
+        refreshAll();
+
+        toast(
+          "Backup restored"
+        );
+
+
+      }catch(error){
+
+        console.error(error);
+
+        alert(
+          "Could not read backup."
+        );
+
+      }
+
+    };
+
+
+  reader.readAsText(file);
+
+}
+
+
+/* ================= ADMIN SETTINGS ================= */
+
+function loadAdminSettings(){
+
+  const admin =
+    getAdmin();
+
+  $("adminEmail").value =
+    admin.email;
+
+}
+
+
+function saveAdminSettings(){
+
+  const admin =
+    getAdmin();
+
+
+  const email =
+    $("adminEmail")
+      .value
+      .trim();
+
+
+  const newPassword =
+    $("newPassword")
+      .value;
+
+
+  if(!email){
+
+    alert(
+      "Admin email required."
+    );
+
+    return;
+
+  }
+
+
+  admin.email =
+    email;
+
+
+  if(newPassword){
+
+    if(
+      newPassword.length < 4
+    ){
+
+      alert(
+        "Password must be at least 4 characters."
+      );
+
+      return;
+
+    }
+
+    admin.password =
+      newPassword;
+
+  }
+
+
+  localStorage.setItem(
+    ADMIN_KEY,
+    JSON.stringify(admin)
+  );
+
+
+  $("newPassword").value = "";
+
+  toast(
+    "Admin settings saved"
+  );
+
+}
+
+
+/* ================= CLEAR DATABASE ================= */
+
+function clearDatabase(){
+
+  const answer =
+    prompt(
+      "Type DELETE to clear all tenant and payment data."
+    );
+
+
+  if(answer !== "DELETE"){
+
+    return;
+
+  }
+
+
+  localStorage.removeItem(
+    DB_KEY
+  );
+
+
+  saveDB(
+    defaultDatabase()
+  );
+
+
+  refreshAll();
+
+  toast(
+    "All data cleared"
+  );
+
+}
+
+
+/* ================= PAYMENT MONTH FILTER ================= */
+
+function populatePaymentMonths(){
+
+  const select =
+    $("paymentMonth");
+
+
+  const oldValue =
+    select.value;
+
+
+  select.innerHTML =
+    `
+      <option value="">
+        All Months
+      </option>
+    `;
+
+
+  const db =
+    getDB();
+
+
+  const months =
+    [
+      ...new Set(
+        db.payments
+          .map(
+            p => p.period
+          )
+          .filter(Boolean)
+      )
+    ]
+    .sort()
+    .reverse();
+
+
+  if(
+    !months.includes(
+      currentMonth()
+    )
+  ){
+
+    months.unshift(
+      currentMonth()
+    );
+
+  }
+
+
+  months.forEach(month => {
+
+    select.innerHTML +=
+      `
+      <option value="${month}">
+        ${month}
+      </option>
+      `;
+
+  });
+
+
+  if(
+    months.includes(oldValue)
+  ){
+
+    select.value =
+      oldValue;
+
+  }
+
+}
+
+
+/* ================= REFRESH ================= */
+
+function refreshAll(){
+
+  renderDashboard();
+
+  renderTenants();
+
+  populatePaymentMonths();
+
+  renderPayments();
+
+  loadAdminSettings();
+
+}
+
+
+/* ================= TOAST ================= */
+
+let toastTimer;
+
+
+function toast(message){
+
+  const el =
+    $("toast");
+
+
+  el.textContent =
+    message;
+
+
+  el.classList.add(
+    "show"
+  );
+
+
+  clearTimeout(
+    toastTimer
+  );
+
+
+  toastTimer =
+    setTimeout(
+      () => {
+
+        el.classList.remove(
+          "show"
+        );
+
+      },
+      2500
+    );
+
+}
+
+
+/* ================= EVENT LISTENERS ================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function(){
+
+    /* LOGIN */
+
+    $("loginBtn")
+      .addEventListener(
+        "click",
+        login
+      );
+
+
+    $("demoBtn")
+      .addEventListener(
+        "click",
+        demoLogin
+      );
+
+
+    $("logoutBtn")
+      .addEventListener(
+        "click",
+        logout
+      );
+
+
+    $("password")
+      .addEventListener(
+        "keydown",
+        function(event){
+
+          if(
+            event.key === "Enter"
+          ){
+
+            login();
+
+          }
+
+        }
+      );
+
+
+    /* NAV */
+
+    document
+      .querySelectorAll(
+        "[data-page]"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          function(){
+
+            openPage(
+              this.dataset.page
+            );
+
+          }
+        );
+
+      });
+
+
+    /* TENANT */
+
+    $("addTenantBtn")
+      .addEventListener(
+        "click",
+        () => openTenantModal()
+      );
+
+
+    $("quickAddBtn")
+      .addEventListener(
+        "click",
+        () => {
+
+          openPage(
+            "tenants"
+          );
+
+          openTenantModal();
+
+        }
+      );
+
+
+    $("closeTenantModal")
+      .addEventListener(
+        "click",
+        closeTenantModal
+      );
+
+
+    $("cancelTenant")
+      .addEventListener(
+        "click",
+        closeTenantModal
+      );
+
+
+    $("tenantForm")
+      .addEventListener(
+        "submit",
+        saveTenant
+      );
+
+
+    $("tenantSearch")
+      .addEventListener(
+        "input",
+        renderTenants
+      );
+
+
+    $("tenantStatus")
+      .addEventListener(
+        "change",
+        renderTenants
+      );
+
+
+    /* PAYMENT */
+
+    $("addPaymentBtn")
+      .addEventListener(
+        "click",
+        openPaymentModal
+      );
+
+
+    $("closePaymentModal")
+      .addEventListener(
+        "click",
+        closePaymentModal
+      );
+
+
+    $("cancelPayment")
+      .addEventListener(
+        "click",
+        closePaymentModal
+      );
+
+
+    $("paymentForm")
+      .addEventListener(
+        "submit",
+        savePayment
+      );
+
+
+    $("paymentSearch")
+      .addEventListener(
+        "input",
+        renderPayments
+      );
+
+
+    $("paymentMonth")
+      .addEventListener(
+        "change",
+        renderPayments
+      );
+
+
+    /* REPORT */
+
+    document
+      .querySelectorAll(
+        ".period-btn"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          function(){
+
+            createReport(
+              Number(
+                this.dataset.months
+              )
+            );
+
+          }
+        );
+
+      });
+
+
+    $("pdfBtn")
+      .addEventListener(
+        "click",
+        downloadPDF
+      );
+
+
+    /* ADMIN */
+
+    $("saveAdminBtn")
+      .addEventListener(
+        "click",
+        saveAdminSettings
+      );
+
+
+    $("backupBtn")
+      .addEventListener(
+        "click",
+        backupDatabase
+      );
+
+
+    $("restoreFile")
+      .addEventListener(
+        "change",
+        function(){
+
+          restoreDatabase(
+            this.files[0]
+          );
+
+        }
+      );
+
+
+    $("clearBtn")
+      .addEventListener(
+        "click",
+        clearDatabase
+      );
+
+
+    /* REPORT DEFAULT */
+
+    createReport(1);
+
+
+    /* AUTH */
+
+    const loggedIn =
+      localStorage.getItem(
+        AUTH_KEY
+      ) === "1";
+
+
+    if(loggedIn){
+
+      showApp();
+
+    }else{
+
+      showLogin();
+
+    }
+
+  }
+);
+
+
+/* ================= GLOBAL FUNCTIONS ================= */
+
+window.login =
+  login;
+
+window.demoLogin =
+  demoLogin;
+
+window.logout =
+  logout;
+
+window.editTenant =
+  editTenant;
+
+window.outTenant =
+  outTenant;
+
+window.restoreTenant =
+  restoreTenant;
+
+window.deleteTenant =
+  deleteTenant;
+
+window.deletePayment =
+  deletePayment;
