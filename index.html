@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AHR Home Rent System</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="login" class="login"><div class="login-card">
+<div class="logo">⌂ <span>AHR Home Rent System</span></div>
+<p>Premium Rent Management</p>
+<input id="email" type="email" placeholder="Admin email">
+<input id="password" type="password" placeholder="Password">
+<button class="primary full" onclick="login()">Login</button>
+<button class="soft full" onclick="demo()">Use Demo Mode</button>
+<div id="loginMsg"></div>
+</div></div>
+
+<div id="app" class="hidden">
+<header><div class="logo">⌂ <span>AHR Home Rent System</span></div><div><span id="adminName"></span><button class="soft" onclick="logout()">Logout</button></div></header>
+<div class="layout">
+<aside>
+<button class="nav active" onclick="page('dashboard',this)">▦ Dashboard</button>
+<button class="nav" onclick="page('tenants',this)">♙ Tenants</button>
+<button class="nav" onclick="page('payments',this)">৳ Payments</button>
+<button class="nav" onclick="page('reports',this)">▤ Reports</button>
+<button class="nav" onclick="page('settings',this)">⚙ Settings</button>
+</aside>
+<main>
+<section id="dashboard" class="section">
+<div class="head"><div><h1>Dashboard</h1><p>Overview of your rental property</p></div><button class="primary" onclick="openPayment()">+ Payment</button></div>
+<div class="stats">
+<div><small>Active Tenants</small><b id="active">0</b></div><div><small>Total Members</small><b id="members">0</b></div>
+<div><small>Monthly Rent</small><b id="rent">৳0</b></div><div><small>Service Charge</small><b id="service">৳0</b></div>
+<div><small>Paid This Month</small><b id="paid">৳0</b></div><div class="red"><small>Current Due</small><b id="due">৳0</b></div>
+</div>
+<div class="card"><h2>Quick Statement</h2><div class="periods"><button onclick="quick(1)">1 Month</button><button onclick="quick(3)">3 Months</button><button onclick="quick(6)">6 Months</button><button onclick="quick(12)">12 Months</button></div><div id="quickResult" class="result">Choose a period.</div></div>
+<div class="card"><h2>Recent Payments</h2><div id="recent"></div></div>
+</section>
+
+<section id="tenants" class="section hidden"><div class="head"><div><h1>Tenants</h1><p>Add, edit and manage tenants</p></div><button class="primary" onclick="openTenant()">+ Add Tenant</button></div>
+<div class="toolbar"><input id="tSearch" placeholder="Search tenant, phone or flat" oninput="renderTenants()"><select id="tStatus" onchange="renderTenants()"><option value="active">Active</option><option value="out">Out</option><option value="all">All</option></select></div>
+<div class="table"><table><thead><tr><th>Tenant</th><th>Flat</th><th>Members</th><th>Monthly</th><th>Status</th><th>Action</th></tr></thead><tbody id="tenantRows"></tbody></table></div></section>
+
+<section id="payments" class="section hidden"><div class="head"><div><h1>Payments</h1><p>Rent and charge collection</p></div><button class="primary" onclick="openPayment()">+ Add Payment</button></div>
+<div class="toolbar"><input id="pSearch" placeholder="Search tenant or month" oninput="renderPayments()"><select id="pFilter" onchange="renderPayments()"><option value="all">All Payments</option><option value="month">Current Month</option></select></div>
+<div class="table"><table><thead><tr><th>Date</th><th>Tenant</th><th>Month</th><th>Total</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody id="paymentRows"></tbody></table></div></section>
+
+<section id="reports" class="section hidden"><div class="head"><div><h1>Reports</h1><p>Professional printable/downloadable PDF reports</p></div></div>
+<div class="card controls"><label>From<input type="month" id="from"></label><label>To<input type="month" id="to"></label><button class="primary" onclick="makeReport()">Generate Report</button><button class="pdf" onclick="downloadPDF()">Download PDF</button></div>
+<div id="report"></div></section>
+
+<section id="settings" class="section hidden"><div class="head"><div><h1>Settings</h1><p>System settings and local database backup</p></div></div>
+<div class="card settings"><label>Property / Building Name<input id="property" placeholder="AHR Home"></label><button class="primary" onclick="saveSettings()">Save</button><hr><h2>Local Database</h2><button class="soft" onclick="backup()">Download Backup</button><label class="file">Restore Backup<input type="file" accept=".json" onchange="restore(event)"></label><button class="danger" onclick="resetAll()">Reset All Data</button></div></section>
+</main></div></div>
+
+<div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h2 id="mtitle"></h2><button onclick="closeModal()">×</button></div><div id="mbody"></div></div></div>
+<script src="js/app.js"></script>
+</body></html>
