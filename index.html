@@ -1,60 +1,915 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AHR Home Rent System</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div id="login" class="login"><div class="login-card">
-<div class="logo">⌂ <span>AHR Home Rent System</span></div>
-<p>Premium Rent Management</p>
-<input id="email" type="email" placeholder="Admin email">
-<input id="password" type="password" placeholder="Password">
-<button class="primary full" onclick="login()">Login</button>
-<button class="soft full" onclick="demo()">Use Demo Mode</button>
-<div id="loginMsg"></div>
-</div></div>
+  <meta charset="UTF-8">
 
-<div id="app" class="hidden">
-<header><div class="logo">⌂ <span>AHR Home Rent System</span></div><div><span id="adminName"></span><button class="soft" onclick="logout()">Logout</button></div></header>
-<div class="layout">
-<aside>
-<button class="nav active" onclick="page('dashboard',this)">▦ Dashboard</button>
-<button class="nav" onclick="page('tenants',this)">♙ Tenants</button>
-<button class="nav" onclick="page('payments',this)">৳ Payments</button>
-<button class="nav" onclick="page('reports',this)">▤ Reports</button>
-<button class="nav" onclick="page('settings',this)">⚙ Settings</button>
-</aside>
-<main>
-<section id="dashboard" class="section">
-<div class="head"><div><h1>Dashboard</h1><p>Overview of your rental property</p></div><button class="primary" onclick="openPayment()">+ Payment</button></div>
-<div class="stats">
-<div><small>Active Tenants</small><b id="active">0</b></div><div><small>Total Members</small><b id="members">0</b></div>
-<div><small>Monthly Rent</small><b id="rent">৳0</b></div><div><small>Service Charge</small><b id="service">৳0</b></div>
-<div><small>Paid This Month</small><b id="paid">৳0</b></div><div class="red"><small>Current Due</small><b id="due">৳0</b></div>
-</div>
-<div class="card"><h2>Quick Statement</h2><div class="periods"><button onclick="quick(1)">1 Month</button><button onclick="quick(3)">3 Months</button><button onclick="quick(6)">6 Months</button><button onclick="quick(12)">12 Months</button></div><div id="quickResult" class="result">Choose a period.</div></div>
-<div class="card"><h2>Recent Payments</h2><div id="recent"></div></div>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>AHR Home Rent System</title>
+
+  <link rel="stylesheet" href="./style.css?v=5">
+</head>
+
+<body>
+
+<!-- ================= LOGIN ================= -->
+
+<section id="loginPage" class="login-page">
+
+  <div class="login-card">
+
+    <div class="brand-logo">
+      AHR
+    </div>
+
+    <h1>AHR Home Rent System</h1>
+
+    <p class="login-subtitle">
+      Premium Home Rent Management
+    </p>
+
+    <div id="loginError" class="login-error"></div>
+
+    <label>Admin Email</label>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="admin@demo.com"
+      autocomplete="username"
+    >
+
+    <label>Password</label>
+
+    <input
+      id="password"
+      type="password"
+      placeholder="123456"
+      autocomplete="current-password"
+    >
+
+    <button
+      type="button"
+      id="loginBtn"
+      class="primary-btn"
+    >
+      Login
+    </button>
+
+    <button
+      type="button"
+      id="demoBtn"
+      class="demo-btn"
+    >
+      Use Demo Login
+    </button>
+
+    <small>
+      Demo: admin@demo.com / 123456
+    </small>
+
+  </div>
+
 </section>
 
-<section id="tenants" class="section hidden"><div class="head"><div><h1>Tenants</h1><p>Add, edit and manage tenants</p></div><button class="primary" onclick="openTenant()">+ Add Tenant</button></div>
-<div class="toolbar"><input id="tSearch" placeholder="Search tenant, phone or flat" oninput="renderTenants()"><select id="tStatus" onchange="renderTenants()"><option value="active">Active</option><option value="out">Out</option><option value="all">All</option></select></div>
-<div class="table"><table><thead><tr><th>Tenant</th><th>Flat</th><th>Members</th><th>Monthly</th><th>Status</th><th>Action</th></tr></thead><tbody id="tenantRows"></tbody></table></div></section>
 
-<section id="payments" class="section hidden"><div class="head"><div><h1>Payments</h1><p>Rent and charge collection</p></div><button class="primary" onclick="openPayment()">+ Add Payment</button></div>
-<div class="toolbar"><input id="pSearch" placeholder="Search tenant or month" oninput="renderPayments()"><select id="pFilter" onchange="renderPayments()"><option value="all">All Payments</option><option value="month">Current Month</option></select></div>
-<div class="table"><table><thead><tr><th>Date</th><th>Tenant</th><th>Month</th><th>Total</th><th>Paid</th><th>Due</th><th>Action</th></tr></thead><tbody id="paymentRows"></tbody></table></div></section>
+<!-- ================= APPLICATION ================= -->
 
-<section id="reports" class="section hidden"><div class="head"><div><h1>Reports</h1><p>Professional printable/downloadable PDF reports</p></div></div>
-<div class="card controls"><label>From<input type="month" id="from"></label><label>To<input type="month" id="to"></label><button class="primary" onclick="makeReport()">Generate Report</button><button class="pdf" onclick="downloadPDF()">Download PDF</button></div>
-<div id="report"></div></section>
+<section id="appPage" class="app-page hidden">
 
-<section id="settings" class="section hidden"><div class="head"><div><h1>Settings</h1><p>System settings and local database backup</p></div></div>
-<div class="card settings"><label>Property / Building Name<input id="property" placeholder="AHR Home"></label><button class="primary" onclick="saveSettings()">Save</button><hr><h2>Local Database</h2><button class="soft" onclick="backup()">Download Backup</button><label class="file">Restore Backup<input type="file" accept=".json" onchange="restore(event)"></label><button class="danger" onclick="resetAll()">Reset All Data</button></div></section>
-</main></div></div>
+  <!-- TOPBAR -->
 
-<div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-head"><h2 id="mtitle"></h2><button onclick="closeModal()">×</button></div><div id="mbody"></div></div></div>
-<script src="js/app.js"></script>
-</body></html>
+  <header class="topbar">
+
+    <div>
+      <div class="top-brand">
+        AHR Home Rent System
+      </div>
+
+      <div class="top-small">
+        Premium Rent Management
+      </div>
+    </div>
+
+    <button
+      type="button"
+      id="logoutBtn"
+      class="logout-btn"
+    >
+      Logout
+    </button>
+
+  </header>
+
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+
+    <aside class="sidebar">
+
+      <button
+        type="button"
+        class="nav-btn active"
+        data-page="dashboard"
+      >
+        🏠 Dashboard
+      </button>
+
+      <button
+        type="button"
+        class="nav-btn"
+        data-page="tenants"
+      >
+        👨‍👩‍👧 Tenants
+      </button>
+
+      <button
+        type="button"
+        class="nav-btn"
+        data-page="payments"
+      >
+        💳 Payments
+      </button>
+
+      <button
+        type="button"
+        class="nav-btn"
+        data-page="reports"
+      >
+        📊 Reports
+      </button>
+
+      <button
+        type="button"
+        class="nav-btn"
+        data-page="admin"
+      >
+        🔐 Admin Panel
+      </button>
+
+    </aside>
+
+
+    <!-- CONTENT -->
+
+    <main class="content">
+
+
+      <!-- ================= DASHBOARD ================= -->
+
+      <section
+        id="dashboard"
+        class="page-section active-page"
+      >
+
+        <div class="page-title">
+          <div>
+            <h2>Dashboard</h2>
+            <p>Home rent overview</p>
+          </div>
+
+          <button
+            type="button"
+            id="quickAddBtn"
+            class="primary-btn small-btn"
+          >
+            + Add Tenant
+          </button>
+        </div>
+
+
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <span>All Tenants</span>
+            <strong id="statTenants">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Active Tenants</span>
+            <strong id="statActive">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Total Members</span>
+            <strong id="statMembers">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Monthly Rent</span>
+            <strong id="statRent">৳0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Service Charge</span>
+            <strong id="statService">৳0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Other Charge</span>
+            <strong id="statOther">৳0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>This Month Paid</span>
+            <strong id="statPaid">৳0</strong>
+          </div>
+
+          <div class="stat-card danger">
+            <span>This Month Due</span>
+            <strong id="statDue">৳0</strong>
+          </div>
+
+        </div>
+
+
+        <div class="dashboard-grid">
+
+          <div class="panel">
+
+            <div class="panel-head">
+              <h3>Recent Payments</h3>
+
+              <button
+                type="button"
+                class="text-btn"
+                data-page="payments"
+              >
+                View All
+              </button>
+            </div>
+
+            <div id="recentPayments"></div>
+
+          </div>
+
+
+          <div class="panel">
+
+            <div class="panel-head">
+              <h3>Active Tenants</h3>
+
+              <button
+                type="button"
+                class="text-btn"
+                data-page="tenants"
+              >
+                View All
+              </button>
+            </div>
+
+            <div id="recentTenants"></div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= TENANTS ================= -->
+
+      <section
+        id="tenants"
+        class="page-section"
+      >
+
+        <div class="page-title">
+
+          <div>
+            <h2>Tenants</h2>
+            <p>Manage all home tenants</p>
+          </div>
+
+          <button
+            type="button"
+            id="addTenantBtn"
+            class="primary-btn"
+          >
+            + Add Tenant
+          </button>
+
+        </div>
+
+
+        <div class="toolbar">
+
+          <input
+            id="tenantSearch"
+            type="search"
+            placeholder="Search tenant..."
+          >
+
+          <select id="tenantStatus">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="out">Out Tenant</option>
+          </select>
+
+        </div>
+
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Members</th>
+                <th>Rent</th>
+                <th>Service</th>
+                <th>Other</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+
+            </thead>
+
+            <tbody id="tenantTable"></tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= PAYMENTS ================= -->
+
+      <section
+        id="payments"
+        class="page-section"
+      >
+
+        <div class="page-title">
+
+          <div>
+            <h2>Payments</h2>
+            <p>Rent collection and payment history</p>
+          </div>
+
+          <button
+            type="button"
+            id="addPaymentBtn"
+            class="primary-btn"
+          >
+            + Add Payment
+          </button>
+
+        </div>
+
+
+        <div class="toolbar">
+
+          <input
+            id="paymentSearch"
+            type="search"
+            placeholder="Search payment..."
+          >
+
+          <select id="paymentMonth"></select>
+
+        </div>
+
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+
+              <tr>
+                <th>Date</th>
+                <th>Tenant</th>
+                <th>Period</th>
+                <th>Amount</th>
+                <th>Method</th>
+                <th>Note</th>
+                <th>Action</th>
+              </tr>
+
+            </thead>
+
+            <tbody id="paymentTable"></tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= REPORTS ================= -->
+
+      <section
+        id="reports"
+        class="page-section"
+      >
+
+        <div class="page-title">
+
+          <div>
+            <h2>Reports</h2>
+            <p>Generate rent statements and PDF reports</p>
+          </div>
+
+        </div>
+
+
+        <div class="report-box">
+
+          <h3>Quick Statement</h3>
+
+          <p>
+            Select a period to calculate expected rent,
+            paid amount and due amount.
+          </p>
+
+
+          <div class="quick-periods">
+
+            <button
+              type="button"
+              class="period-btn"
+              data-months="1"
+            >
+              1 Month
+            </button>
+
+            <button
+              type="button"
+              class="period-btn"
+              data-months="3"
+            >
+              3 Months
+            </button>
+
+            <button
+              type="button"
+              class="period-btn"
+              data-months="6"
+            >
+              6 Months
+            </button>
+
+            <button
+              type="button"
+              class="period-btn"
+              data-months="12"
+            >
+              12 Months
+            </button>
+
+          </div>
+
+
+          <div id="reportResult" class="report-result"></div>
+
+
+          <button
+            type="button"
+            id="pdfBtn"
+            class="primary-btn"
+          >
+            🖨 Download / Save PDF
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= ADMIN ================= -->
+
+      <section
+        id="admin"
+        class="page-section"
+      >
+
+        <div class="page-title">
+
+          <div>
+            <h2>Admin Panel</h2>
+            <p>System settings and database controls</p>
+          </div>
+
+        </div>
+
+
+        <div class="admin-grid">
+
+          <div class="panel">
+
+            <h3>Admin Account</h3>
+
+            <label>Admin Email</label>
+
+            <input
+              id="adminEmail"
+              type="email"
+            >
+
+            <label>New Password</label>
+
+            <input
+              id="newPassword"
+              type="password"
+              placeholder="Leave empty to keep current password"
+            >
+
+            <button
+              type="button"
+              id="saveAdminBtn"
+              class="primary-btn"
+            >
+              Save Admin Settings
+            </button>
+
+          </div>
+
+
+          <div class="panel">
+
+            <h3>Database</h3>
+
+            <button
+              type="button"
+              id="backupBtn"
+              class="secondary-btn"
+            >
+              Download Backup
+            </button>
+
+            <label class="file-btn">
+              Restore Backup
+              <input
+                type="file"
+                id="restoreFile"
+                accept=".json"
+              >
+            </label>
+
+            <button
+              type="button"
+              id="clearBtn"
+              class="danger-btn"
+            >
+              Clear All Data
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div class="premium-footer">
+          AHR HOME RENT SYSTEM • PREMIUM
+        </div>
+
+      </section>
+
+
+    </main>
+
+  </div>
+
+</section>
+
+
+<!-- ================= TENANT MODAL ================= -->
+
+<div
+  id="tenantModal"
+  class="modal hidden"
+>
+
+  <div class="modal-card">
+
+    <div class="modal-head">
+
+      <h3 id="tenantModalTitle">
+        Add Tenant
+      </h3>
+
+      <button
+        type="button"
+        class="close-btn"
+        id="closeTenantModal"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form id="tenantForm">
+
+      <input
+        type="hidden"
+        id="tenantId"
+      >
+
+      <div class="form-grid">
+
+        <div>
+          <label>Tenant Name *</label>
+          <input
+            id="tenantName"
+            required
+          >
+        </div>
+
+        <div>
+          <label>Phone</label>
+          <input
+            id="tenantPhone"
+          >
+        </div>
+
+        <div>
+          <label>Room / Flat</label>
+          <input
+            id="tenantRoom"
+            placeholder="A-101"
+          >
+        </div>
+
+        <div>
+          <label>Member Count</label>
+          <input
+            id="tenantMembers"
+            type="number"
+            min="1"
+            value="1"
+          >
+        </div>
+
+        <div>
+          <label>Monthly Rent</label>
+          <input
+            id="tenantRent"
+            type="number"
+            min="0"
+            value="0"
+          >
+        </div>
+
+        <div>
+          <label>Service Charge</label>
+          <input
+            id="tenantService"
+            type="number"
+            min="0"
+            value="0"
+          >
+        </div>
+
+        <div>
+          <label>Other Charge</label>
+          <input
+            id="tenantOther"
+            type="number"
+            min="0"
+            value="0"
+          >
+        </div>
+
+        <div>
+          <label>Advance</label>
+          <input
+            id="tenantAdvance"
+            type="number"
+            min="0"
+            value="0"
+          >
+        </div>
+
+        <div>
+          <label>Join Date</label>
+          <input
+            id="tenantJoin"
+            type="date"
+          >
+        </div>
+
+        <div>
+          <label>Status</label>
+          <select id="tenantStatusForm">
+            <option value="active">
+              Active
+            </option>
+
+            <option value="out">
+              Out Tenant
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label>Out Date</label>
+          <input
+            id="tenantOut"
+            type="date"
+          >
+        </div>
+
+      </div>
+
+
+      <label>Address</label>
+
+      <textarea
+        id="tenantAddress"
+        rows="3"
+      ></textarea>
+
+
+      <label>Note</label>
+
+      <textarea
+        id="tenantNote"
+        rows="3"
+      ></textarea>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          id="cancelTenant"
+          class="secondary-btn"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="primary-btn"
+        >
+          Save Tenant
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- ================= PAYMENT MODAL ================= -->
+
+<div
+  id="paymentModal"
+  class="modal hidden"
+>
+
+  <div class="modal-card">
+
+    <div class="modal-head">
+
+      <h3>Add Payment</h3>
+
+      <button
+        type="button"
+        class="close-btn"
+        id="closePaymentModal"
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    <form id="paymentForm">
+
+      <div class="form-grid">
+
+        <div>
+          <label>Tenant *</label>
+
+          <select
+            id="paymentTenant"
+            required
+          ></select>
+        </div>
+
+        <div>
+          <label>Amount *</label>
+
+          <input
+            id="paymentAmount"
+            type="number"
+            min="0"
+            required
+          >
+        </div>
+
+        <div>
+          <label>Payment Date</label>
+
+          <input
+            id="paymentDate"
+            type="date"
+          >
+        </div>
+
+        <div>
+          <label>Period</label>
+
+          <input
+            id="paymentPeriod"
+            type="month"
+          >
+        </div>
+
+        <div>
+          <label>Method</label>
+
+          <select id="paymentMethod">
+
+            <option>
+              Cash
+            </option>
+
+            <option>
+              bKash
+            </option>
+
+            <option>
+              Nagad
+            </option>
+
+            <option>
+              Bank
+            </option>
+
+            <option>
+              Other
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <label>Note</label>
+
+      <textarea
+        id="paymentNote"
+        rows="3"
+      ></textarea>
+
+
+      <div class="modal-actions">
+
+        <button
+          type="button"
+          id="cancelPayment"
+          class="secondary-btn"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="submit"
+          class="primary-btn"
+        >
+          Save Payment
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- ================= TOAST ================= -->
+
+<div id="toast"></div>
+
+
+<noscript>
+  <div class="noscript">
+    JavaScript is required for AHR Home Rent System.
+  </div>
+</noscript>
+
+
+<script src="./app.js?v=5" defer></script>
+
+</body>
+</html>
